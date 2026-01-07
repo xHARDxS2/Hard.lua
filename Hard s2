@@ -1,0 +1,200 @@
+loadstring([[
+--========================================
+-- XHARDXS2 | STEAL A BRAINROT HUB (NEW)
+--========================================
+
+repeat task.wait() until game:IsLoaded()
+
+-- SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Camera = workspace.CurrentCamera
+local Player = Players.LocalPlayer
+
+-- VARS
+local ESP_PLAYERS = false
+local ESP_OBJECTS = false
+local TP_BASE = false
+local AIMBOT = false
+local BASE_CFRAME = nil
+
+--========================================
+-- GUI
+--========================================
+local gui = Instance.new("ScreenGui", Player.PlayerGui)
+gui.Name = "XHARDXS2"
+
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0,260,0,300)
+main.Position = UDim2.new(0,20,0.3,0)
+main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,10)
+
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1,0,0,40)
+title.BackgroundTransparency = 1
+title.Text = "XHARDXS2 | Brainrot"
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+title.TextColor3 = Color3.new(1,1,1)
+
+local content = Instance.new("Frame", main)
+content.Position = UDim2.new(0,0,0,40)
+content.Size = UDim2.new(1,0,1,-40)
+content.BackgroundTransparency = 1
+
+local function Button(txt, y, cb)
+    local b = Instance.new("TextButton", content)
+    b.Size = UDim2.new(1,-20,0,32)
+    b.Position = UDim2.new(0,10,0,y)
+    b.Text = txt
+    b.TextScaled = true
+    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    b.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function()
+        cb(b)
+    end)
+end
+
+--========================================
+-- ESP PLAYERS (AUTO UPDATE)
+--========================================
+local function PlayerESP(char)
+    if not ESP_PLAYERS then return end
+    if char:FindFirstChild("XH_ESP") then return end
+
+    local h = Instance.new("Highlight")
+    h.Name = "XH_ESP"
+    h.FillColor = Color3.fromRGB(0,255,0)
+    h.OutlineColor = Color3.new(0,0,0)
+    h.Parent = char
+end
+
+local function ClearESP(char)
+    local h = char:FindFirstChild("XH_ESP")
+    if h then h:Destroy() end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(PlayerESP)
+end)
+
+--========================================
+-- ESP OBJECTS / BRAINROT
+--========================================
+local function ObjectESP(obj)
+    if not ESP_OBJECTS then return end
+    if not (obj:IsA("Model") or obj:IsA("Part")) then return end
+    if obj:FindFirstChild("XH_OBJ") then return end
+
+    local h = Instance.new("Highlight")
+    h.Name = "XH_OBJ"
+    h.FillColor = Color3.fromRGB(0,150,255)
+    h.Parent = obj
+end
+
+workspace.DescendantAdded:Connect(ObjectESP)
+
+--========================================
+-- TP BASE (TAPETE)
+--========================================
+local function TPBase()
+    if not TP_BASE or not BASE_CFRAME then return end
+
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local carpet = Instance.new("Part", workspace)
+    carpet.Size = Vector3.new(6,0.3,6)
+    carpet.Anchored = true
+    carpet.Material = Enum.Material.Neon
+    carpet.Color = Color3.fromRGB(0,150,255)
+    carpet.CFrame = hrp.CFrame * CFrame.new(0,-3,0)
+
+    hrp.Anchored = true
+
+    local tween = TweenService:Create(
+        carpet,
+        TweenInfo.new(2, Enum.EasingStyle.Linear),
+        {CFrame = BASE_CFRAME * CFrame.new(0,-3,0)}
+    )
+
+    tween:Play()
+    tween.Completed:Wait()
+
+    hrp.CFrame = BASE_CFRAME
+    hrp.Anchored = false
+    carpet:Destroy()
+end
+
+--========================================
+-- AIMBOT ALL
+--========================================
+RunService.RenderStepped:Connect(function()
+    if not AIMBOT then return end
+
+    local closest, dist = nil, math.huge
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= Player and plr.Character and plr.Character:FindFirstChild("Head") then
+            local pos, vis = Camera:WorldToViewportPoint(plr.Character.Head.Position)
+            if vis then
+                local d = (Vector2.new(pos.X,pos.Y) -
+                          Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)).Magnitude
+                if d < dist then
+                    dist = d
+                    closest = plr.Character.Head
+                end
+            end
+        end
+    end
+
+    if closest then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Position)
+    end
+end)
+
+--========================================
+-- BUTTONS
+--========================================
+Button("ESP Players: OFF",10,function(b)
+    ESP_PLAYERS = not ESP_PLAYERS
+    b.Text = ESP_PLAYERS and "ESP Players: ON" or "ESP Players: OFF"
+    for _,p in pairs(Players:GetPlayers()) do
+        if p.Character then
+            if ESP_PLAYERS then PlayerESP(p.Character) else ClearESP(p.Character) end
+        end
+    end
+end)
+
+Button("ESP Brainrot: OFF",50,function(b)
+    ESP_OBJECTS = not ESP_OBJECTS
+    b.Text = ESP_OBJECTS and "ESP Brainrot: ON" or "ESP Brainrot: OFF"
+end)
+
+Button("Salvar Base",90,function()
+    local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then BASE_CFRAME = hrp.CFrame end
+end)
+
+Button("TP Base: OFF",130,function(b)
+    TP_BASE = not TP_BASE
+    b.Text = TP_BASE and "TP Base: ON" or "TP Base: OFF"
+    if TP_BASE then TPBase() end
+end)
+
+Button("Aimbot ALL: OFF",170,function(b)
+    AIMBOT = not AIMBOT
+    b.Text = AIMBOT and "Aimbot ALL: ON" or "Aimbot ALL: OFF"
+end)
+
+Button("Reset",210,function()
+    if Player.Character then Player.Character:BreakJoints() end
+end)
+
+print("XHARDXS2 Brainrot Hub carregado com sucesso")
+]])()
