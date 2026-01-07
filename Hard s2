@@ -1,200 +1,154 @@
-loadstring([[
---========================================
--- XHARDXS2 | STEAL A BRAINROT HUB (NEW)
---========================================
+--==================================================
+-- XHARDXS2 HUB | AUTO BRAINROT + AUTO STEAL + TP
+--==================================================
 
 repeat task.wait() until game:IsLoaded()
 
 -- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Camera = workspace.CurrentCamera
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = Players.LocalPlayer
 
--- VARS
-local ESP_PLAYERS = false
-local ESP_OBJECTS = false
-local TP_BASE = false
-local AIMBOT = false
-local BASE_CFRAME = nil
+--==================================================
+-- VARIÁVEIS
+--==================================================
+local AUTO_STEAL = false
+local AUTO_TP = false
+local savedBaseCFrame = nil
+local detectedRemotes = {}
 
---========================================
--- GUI
---========================================
-local gui = Instance.new("ScreenGui", Player.PlayerGui)
-gui.Name = "XHARDXS2"
-
-local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0,260,0,300)
-main.Position = UDim2.new(0,20,0.3,0)
-main.BackgroundColor3 = Color3.fromRGB(25,25,25)
-main.Active = true
-main.Draggable = true
-Instance.new("UICorner", main).CornerRadius = UDim.new(0,10)
-
-local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1,0,0,40)
-title.BackgroundTransparency = 1
-title.Text = "XHARDXS2 | Brainrot"
-title.Font = Enum.Font.GothamBold
-title.TextScaled = true
-title.TextColor3 = Color3.new(1,1,1)
-
-local content = Instance.new("Frame", main)
-content.Position = UDim2.new(0,0,0,40)
-content.Size = UDim2.new(1,0,1,-40)
-content.BackgroundTransparency = 1
-
-local function Button(txt, y, cb)
-    local b = Instance.new("TextButton", content)
-    b.Size = UDim2.new(1,-20,0,32)
-    b.Position = UDim2.new(0,10,0,y)
-    b.Text = txt
-    b.TextScaled = true
-    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    b.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function()
-        cb(b)
-    end)
+--==================================================
+-- DETECTAR REMOTES DO JOGO
+--==================================================
+local function scanRemotes()
+    detectedRemotes = {}
+    for _,obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("RemoteEvent") then
+            local n = obj.Name:lower()
+            if n:find("brain") or n:find("steal") or n:find("grab") then
+                table.insert(detectedRemotes, obj)
+            end
+        end
+    end
 end
 
---========================================
--- ESP PLAYERS (AUTO UPDATE)
---========================================
-local function PlayerESP(char)
-    if not ESP_PLAYERS then return end
-    if char:FindFirstChild("XH_ESP") then return end
+scanRemotes()
 
-    local h = Instance.new("Highlight")
-    h.Name = "XH_ESP"
-    h.FillColor = Color3.fromRGB(0,255,0)
-    h.OutlineColor = Color3.new(0,0,0)
-    h.Parent = char
-end
-
-local function ClearESP(char)
-    local h = char:FindFirstChild("XH_ESP")
-    if h then h:Destroy() end
-end
-
-Players.PlayerAdded:Connect(function(plr)
-    plr.CharacterAdded:Connect(PlayerESP)
-end)
-
---========================================
--- ESP OBJECTS / BRAINROT
---========================================
-local function ObjectESP(obj)
-    if not ESP_OBJECTS then return end
-    if not (obj:IsA("Model") or obj:IsA("Part")) then return end
-    if obj:FindFirstChild("XH_OBJ") then return end
-
-    local h = Instance.new("Highlight")
-    h.Name = "XH_OBJ"
-    h.FillColor = Color3.fromRGB(0,150,255)
-    h.Parent = obj
-end
-
-workspace.DescendantAdded:Connect(ObjectESP)
-
---========================================
--- TP BASE (TAPETE)
---========================================
-local function TPBase()
-    if not TP_BASE or not BASE_CFRAME then return end
-
+--==================================================
+-- ACHAR BRAINROT PRÓXIMO
+--==================================================
+local function getClosestBrainrot()
     local char = Player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local carpet = Instance.new("Part", workspace)
-    carpet.Size = Vector3.new(6,0.3,6)
-    carpet.Anchored = true
-    carpet.Material = Enum.Material.Neon
-    carpet.Color = Color3.fromRGB(0,150,255)
-    carpet.CFrame = hrp.CFrame * CFrame.new(0,-3,0)
-
-    hrp.Anchored = true
-
-    local tween = TweenService:Create(
-        carpet,
-        TweenInfo.new(2, Enum.EasingStyle.Linear),
-        {CFrame = BASE_CFRAME * CFrame.new(0,-3,0)}
-    )
-
-    tween:Play()
-    tween.Completed:Wait()
-
-    hrp.CFrame = BASE_CFRAME
-    hrp.Anchored = false
-    carpet:Destroy()
-end
-
---========================================
--- AIMBOT ALL
---========================================
-RunService.RenderStepped:Connect(function()
-    if not AIMBOT then return end
+    if not hrp then return nil end
 
     local closest, dist = nil, math.huge
-    for _,plr in pairs(Players:GetPlayers()) do
-        if plr ~= Player and plr.Character and plr.Character:FindFirstChild("Head") then
-            local pos, vis = Camera:WorldToViewportPoint(plr.Character.Head.Position)
-            if vis then
-                local d = (Vector2.new(pos.X,pos.Y) -
-                          Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)).Magnitude
+
+    for _,obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local n = obj.Name:lower()
+            if n:find("brain") or n:find("rot") then
+                local d = (obj.Position - hrp.Position).Magnitude
                 if d < dist then
                     dist = d
-                    closest = plr.Character.Head
+                    closest = obj
                 end
             end
         end
     end
 
-    if closest then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Position)
+    return closest
+end
+
+--==================================================
+-- AUTO STEAL (TOUCH + REMOTE)
+--==================================================
+local function stealBrainrot(part)
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    -- TOUCH
+    firetouchinterest(hrp, part, 0)
+    task.wait()
+    firetouchinterest(hrp, part, 1)
+
+    -- REMOTES
+    for _,remote in ipairs(detectedRemotes) do
+        pcall(function()
+            remote:FireServer(part)
+        end)
+    end
+
+    -- TELEPORTA UMA VEZ
+    if AUTO_TP and savedBaseCFrame then
+        task.wait(0.15)
+        hrp.CFrame = savedBaseCFrame
+    end
+end
+
+--==================================================
+-- LOOP AUTO STEAL
+--==================================================
+RunService.Heartbeat:Connect(function()
+    if not AUTO_STEAL then return end
+
+    local brainrot = getClosestBrainrot()
+    if brainrot then
+        stealBrainrot(brainrot)
     end
 end)
 
---========================================
--- BUTTONS
---========================================
-Button("ESP Players: OFF",10,function(b)
-    ESP_PLAYERS = not ESP_PLAYERS
-    b.Text = ESP_PLAYERS and "ESP Players: ON" or "ESP Players: OFF"
-    for _,p in pairs(Players:GetPlayers()) do
-        if p.Character then
-            if ESP_PLAYERS then PlayerESP(p.Character) else ClearESP(p.Character) end
-        end
-    end
-end)
+--==================================================
+-- UI SIMPLES (PAINEL)
+--==================================================
+local gui = Instance.new("ScreenGui", Player.PlayerGui)
+gui.Name = "XHARDXS2"
 
-Button("ESP Brainrot: OFF",50,function(b)
-    ESP_OBJECTS = not ESP_OBJECTS
-    b.Text = ESP_OBJECTS and "ESP Brainrot: ON" or "ESP Brainrot: OFF"
-end)
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0,260,0,220)
+main.Position = UDim2.new(0,20,0.4,0)
+main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
 
-Button("Salvar Base",90,function()
+local function button(text,y,callback)
+    local b = Instance.new("TextButton", main)
+    b.Size = UDim2.new(1,-20,0,35)
+    b.Position = UDim2.new(0,10,0,y)
+    b.Text = text
+    b.TextScaled = true
+    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    b.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+    b.MouseButton1Click:Connect(function()
+        callback(b)
+    end)
+    return b
+end
+
+-- BOTÕES
+button("Salvar Base",15,function()
     local hrp = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then BASE_CFRAME = hrp.CFrame end
+    if hrp then
+        savedBaseCFrame = hrp.CFrame
+    end
 end)
 
-Button("TP Base: OFF",130,function(b)
-    TP_BASE = not TP_BASE
-    b.Text = TP_BASE and "TP Base: ON" or "TP Base: OFF"
-    if TP_BASE then TPBase() end
+button("Auto Steal: OFF",60,function(b)
+    AUTO_STEAL = not AUTO_STEAL
+    b.Text = AUTO_STEAL and "Auto Steal: ON" or "Auto Steal: OFF"
 end)
 
-Button("Aimbot ALL: OFF",170,function(b)
-    AIMBOT = not AIMBOT
-    b.Text = AIMBOT and "Aimbot ALL: ON" or "Aimbot ALL: OFF"
+button("Auto TP Após Steal: OFF",105,function(b)
+    AUTO_TP = not AUTO_TP
+    b.Text = AUTO_TP and "Auto TP Após Steal: ON" or "Auto TP Após Steal: OFF"
 end)
 
-Button("Reset",210,function()
-    if Player.Character then Player.Character:BreakJoints() end
+button("Re-scan Remotes",150,function()
+    scanRemotes()
 end)
 
-print("XHARDXS2 Brainrot Hub carregado com sucesso")
-]])()
+print("✅ XHARDXS2 Auto Brainrot carregado com sucesso")
